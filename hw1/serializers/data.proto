@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message House {
+  string name = 1;
+  repeated string materials = 2;
+  map<string, int32> owners = 3;
+  int32 year_built = 4;
+  float square = 5;
+}
