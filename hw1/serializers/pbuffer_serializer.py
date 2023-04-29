@@ -1,4 +1,4 @@
-from serializers.data_pb2 import House
+from data_pb2 import House
 from google.protobuf.json_format import ParseDict
 
 

@@ -1,0 +1,102 @@
+version: '3'
+
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: proxy.dockerfile
+    ports:
+      - "2000:2000/udp"
+    depends_on:
+      - avro
+      - json
+      - mpack
+      - naive
+      - pbuffer
+      - xml
+      - yaml
+    environment:
+      AVRO_PORT: "2001"
+      AVRO_NAME: "avro"
+      JSON_PORT: "2002"
+      JSON_NAME: "json"
+      MPACK_PORT: "2003"
+      MPACK_NAME: "mpack"
+      NAIVE_PORT: "2004"
+      NAIVE_NAME: "naive"
+      PBUFFER_PORT: "2005"
+      PBUFFER_NAME: "pbuffer"
+      XML_PORT: "2006"
+      XML_NAME: "xml"
+      YAML_PORT: "2007"
+      YAML_NAME: "yaml"
+
+  avro:
+    build:
+      context: .
+      dockerfile: ./format_containers/avro.dockerfile
+    ports:
+      - "2001:2001/udp"
+    environment:
+      SERVER_NAME: "avro"
+      SERVER_PORT: "2001"
+
+  json:
+    build:
+      context: .
+      dockerfile: ./format_containers/json.dockerfile
+    ports:
+      - "2002:2002/udp"
+    environment:
+      SERVER_NAME: "json"
+      SERVER_PORT: "2002"
+
+  mpack:
+    build:
+      context: .
+      dockerfile: ./format_containers/mpack.dockerfile
+    ports:
+      - "2003:2003/udp"
+    environment:
+      SERVER_NAME: "mpack"
+      SERVER_PORT: "2003"
+
+  naive:
+    build:
+      context: .
+      dockerfile: ./format_containers/naive.dockerfile
+    ports:
+      - "2004:2004/udp"
+    environment:
+      SERVER_NAME: "naive"
+      SERVER_PORT: "2004"
+
+  pbuffer:
+    build:
+      context: .
+      dockerfile: ./format_containers/pbuffer.dockerfile
+    ports:
+      - "2005:2005/udp"
+    environment:
+      SERVER_NAME: "pbuffer"
+      SERVER_PORT: "2005"
+
+  xml:
+    build:
+      context: .
+      dockerfile: ./format_containers/xml.dockerfile
+    ports:
+      - "2006:2006/udp"
+    environment:
+      SERVER_NAME: "xml"
+      SERVER_PORT: "2006"
+
+  yaml:
+    build:
+      context: .
+      dockerfile: ./format_containers/yaml.dockerfile
+    ports:
+      - "2007:2007/udp"
+    environment:
+      SERVER_NAME: "yaml"
+      SERVER_PORT: "2007"
