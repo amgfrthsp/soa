@@ -36,7 +36,7 @@ struct House {
 
 # Результаты 
 
-**Формат**: {format_name} - {size of serialized_data} - {serialization_time}ms - {deserialization_time}ms"
+**Формат**: {format_name} - {size of serialized_data} - {serialization_time}ms - {deserialization_time}ms
 
 `XML - 841 - 1.445ms - 0.566ms`
 
