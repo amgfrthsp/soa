@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+service Server {
+ rpc Register(RegisterRequest) returns (RegisterResponse) {}
+ rpc GetUpdates(GetUpdateRequest) returns (Updates) {}
+ rpc AcceptVote(Vote) returns (VoteResponse) {}
+ rpc AcceptMafiaVote(Vote) returns (VoteResponse) {}
+ rpc AcceptSheriffVote(Vote) returns (RevealRoleMessage) {}
+ rpc RevealMafia(RevealRoleMessage) returns (VoteResponse) {}
+ rpc FinishDay(FinishDayMessage) returns (VoteResponse) {}
+ rpc Ping(PingRequest) returns (PingResponse) {}
+}
+
+message Updates {
+  repeated Event events = 1;
+}
+
+message RegisterRequest {
+ optional string username = 1;
+ string signiture = 2;
+}
+
+message RegisterResponse {
+  string username = 1;
+  int32 room = 2;
+  string role = 3;
+  bool auto = 4;
+}
+
+message GetUpdateRequest {
+ string username = 1;
+ string signiture = 2;
+ int32 room = 3;
+}
+
+message Event {
+  oneof event_type {
+    UserJoined user_joined = 1;
+    UserLeft user_left = 2;
+    GameStarted game_started = 3;
+    DayStarted day_started = 4;
+    UserCancelled user_cancelled = 5;
+    ServerMessage server_msg = 6;
+    GameFinished game_finished = 7;
+    NightStarted night_started = 8;
+    MafiaTime mafia_time = 9;
+    UserKilled user_killed = 10;
+    SheriffTime sheriff_time = 11;
+    SheriffChose sheriff_chose = 12;
+    RevealRoleMessage reveal_role = 13;
+  }
+}
+
+message UserJoined {
+  string username = 1;
+}
+
+message UserLeft{
+  string username = 1;
+}
+
+message UserCancelled{
+  string username = 1;
+}
+
+message UserKilled{
+  string username = 1;
+}
+
+message ServerMessage{
+  string msg = 1;
+}
+
+message GameStarted {
+}
+
+message GameFinished {
+  string msg = 1;
+}
+
+message DayStarted {
+}
+
+message WaitForFinish {
+}
+
+message NightStarted {
+}
+
+message MafiaTime {
+}
+
+message SheriffTime {
+}
+
+message SheriffChose {
+}
+
+message RevealRoleMessage{
+  string username = 1;
+  int32 room = 2;
+  string role = 3;
+}
+
+message Vote {
+  string username = 1;
+  string signiture = 2;
+  string victim = 3;
+  int32 room = 4;
+}
+
+message VoteResponse {
+}
+
+message FinishDayMessage {
+  string username = 1;
+  int32 room = 2;
+}
+
+message PingRequest {
+}
+
+message PingResponse {
+  bool auto = 1;
+}
