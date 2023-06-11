@@ -142,6 +142,10 @@ class Room:
             case GameState.VOTING:
                 if len(self.votes) < self.get_alive_users_cnt():
                     return
+                self.game_state = self.next_game_state()
+            case GameState.FINISH_DAY:
+                if len(self.finished_day) < self.get_alive_users_cnt():
+                    return
                 cancelled_user = self.get_cancelled_user()
                 for user in self.users.values():
                     event = server_pb2.Event()
@@ -151,11 +155,8 @@ class Room:
                     user.events.append(event)
                 self.votes = {}
                 self.game_state = self.next_game_state()
-            case GameState.FINISH_DAY:
-                if len(self.finished_day) < self.get_alive_users_cnt():
-                    return
-                self.game_state = self.next_game_state()
                 self.should_finish()
+                self.finished_day = []
             case GameState.NIGHT:
                 for user in self.users.values():
                     night_started = server_pb2.NightStarted()

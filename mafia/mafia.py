@@ -1,18 +1,20 @@
 import enum
 import random
-import arcade.gui
 import arcade
+import arcade.gui
 import threading
 import time
 import grpc
 import proto.server_pb2_grpc as server_pb2_grpc
 import proto.server_pb2 as server_pb2
 import utilities
+import pika
 
 mutex = threading.Lock()
 
 random.seed(time.time())
 
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 
 SCREEN_WIDTH, SCREEN_HEIGHT = arcade.window_commands.get_display_size()
 SCREEN_WIDTH /= 2.4
@@ -63,6 +65,8 @@ class Mafia(arcade.Window):
         self.joined = False
         self.last_updated = 0.0
         self.state = GameState.NOT_STARTED
+
+        self.channel = None
 
         self.users = {}
         self.users_order = []
@@ -176,6 +180,8 @@ class Mafia(arcade.Window):
         )
 
     def on_update(self, delta_time):
+        if self.state != GameState.NOT_STARTED:
+            connection.process_data_events()
         if not self.pinged:
             self.ping()
             return
@@ -248,6 +254,7 @@ class Mafia(arcade.Window):
             username=self.username, signiture=self.signiture, victim=victim, room=self.room)
         self.display_game_event(f"You have killed {victim}")
         self.stub.AcceptMafiaVote(request)
+        self.state = GameState.NIGHT
 
     def sheriff_vote(self, victim):
         request = server_pb2.Vote(
@@ -260,13 +267,14 @@ class Mafia(arcade.Window):
 
         if response.role == "Mafia":
             self.mafia = victim
+        self.state = GameState.NIGHT
 
     def on_draw(self):
         self.clear()
         self.manager.draw()
 
     def on_key_press(self, key, key_modifiers):
-        if (self.status != "ALIVE" or self.auto) and self.registered:
+        if self.status != "ALIVE" and self.registered:
             return
         if key == arcade.key.BACKSPACE:
             if len(self.input) > 1:
@@ -281,6 +289,10 @@ class Mafia(arcade.Window):
         self.input = ">"
 
         if self.status != "ALIVE":
+            return
+
+        if self.auto and not command.startswith('/'):
+            self.send_message(f'{self.username}: {command}')
             return
 
         if command.startswith('/register'):
@@ -350,8 +362,14 @@ class Mafia(arcade.Window):
                 self.display_game_event(
                     "Invalid input")
         else:
-            self.display_game_event(
-                f"{self.username}: {command}")
+            msg = f'{self.username}: {command}'
+            if self.state == GameState.MAFIA or self.state == GameState.SHERIFF:
+                self.channel.basic_publish(
+                    exchange='', routing_key=self.get_queue_name(self.username), body=msg)
+            elif self.state == GameState.NIGHT:
+                self.display_game_event("You can't chat at night")
+            else:
+                self.send_message(msg)
 
     def validate_input(self, input):
         if len(input.split(' ')) < 2:
@@ -380,10 +398,13 @@ class Mafia(arcade.Window):
             self.room = response.room
             self.role = response.role
 
+            self.users[self.username] = User(self.username)
+
             if self.auto:
                 self.display_game_event("YOU ARE PLAYING IN AUTO MODE")
 
             self.registered = True
+
         except grpc.RpcError as e:
             if e.code() == grpc.StatusCode.ALREADY_EXISTS:
                 print("Username already registered.\
@@ -428,9 +449,29 @@ class Mafia(arcade.Window):
         self.display_game_event(f'User {user} is {role}!')
 
     def process_game_started(self):
+        queue_name = self.get_queue_name(self.username)
+
+        self.channel = connection.channel()
+        self.channel.queue_declare(queue=queue_name)
+        self.channel.basic_consume(queue=queue_name,
+                                   on_message_callback=self.process_chat_message,
+                                   auto_ack=True)
+
         self.users[self.username].role = self.role
 
         self.display_game_event(f'Game started!', arcade.color.GREEN)
+
+    def get_queue_name(self, user):
+        return f'chat_{self.room}_{user}'
+
+    def process_chat_message(self, channel, method, properties, body):
+        self.display_game_event(body.decode())
+
+    def send_message(self, msg):
+        for user in self.users:
+            queue_name = self.get_queue_name(user)
+            self.channel.basic_publish(
+                exchange='', routing_key=queue_name, body=msg)
 
     def process_game_finished(self, msg):
         self.display_game_event(msg, arcade.color.BLACK)
@@ -512,7 +553,6 @@ class Mafia(arcade.Window):
                         self.input = ">" + command
                         self.handle_input()
                         break
-                self.handle_input()
 
     def process_user_killed(self, user):
         if user == self.username:
@@ -546,14 +586,13 @@ class Mafia(arcade.Window):
                         self.input = ">" + command
                         self.handle_input()
                         break
-                self.handle_input()
 
     def process_sheriff_chose(self):
         if self.role != "Sheriff":
             self.display_game_event("Sheriff made a check\n")
 
     def display_game_event(self, text, color=arcade.color.BLACK):
-        self.events_text.text += text + "\n"
+        self.events_text.text = text + "\n" + self.events_text.text
 
     def generateSigniture(self):
         return utilities.generate_random_string(15)
@@ -561,7 +600,10 @@ class Mafia(arcade.Window):
 
 def main():
     Mafia()
-    arcade.run()
+    try:
+        arcade.run()
+    except:
+        arcade.run()
 
 
 if __name__ == "__main__":
