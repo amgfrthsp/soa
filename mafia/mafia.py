@@ -1,5 +1,6 @@
 import enum
 import random
+import sys
 import arcade
 import arcade.gui
 import threading
@@ -43,7 +44,7 @@ class User:
 
 
 class Mafia(arcade.Window):
-    def __init__(self):
+    def __init__(self, port):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, "Mafia")
 
         self.manager = arcade.gui.UIManager()
@@ -77,8 +78,9 @@ class Mafia(arcade.Window):
 
         self.host = 'localhost'
         self.server_port = 50051
+        port = self.server_port
         self.channel = grpc.insecure_channel(
-            '{}:{}'.format(self.host, self.server_port))
+            '{}:{}'.format(self.host, port))
         self.stub = server_pb2_grpc.ServerStub(self.channel)
 
         self.h_box = arcade.gui.UIBoxLayout(
@@ -599,7 +601,10 @@ class Mafia(arcade.Window):
 
 
 def main():
-    Mafia()
+    port = 50051
+    if len(sys.argv) > 1:
+        port = sys.argv[1]
+    Mafia(port)
     try:
         arcade.run()
     except:
